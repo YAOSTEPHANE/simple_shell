@@ -1,0 +1,183 @@
+.TH SHELLBY 1 « Août 2021 » « Alx » « 0x16. C - Coquille simple »
+. NOM SH
+. B shellby\fR \- interpréteur de commandes UNIX simple
+. SH SYNOPSIS
+. B shellby\fR [\fIfichier_\fR]
+. SH DESCRIPTION
+. B Shellby\fR est un interpréteur de langage de commande UNIX simple qui lit les commandes d’un fichier ou d’une entrée standard et les exécute.
+
+. B Invocation
+.in +2n
+\fBShellby\fR peut être appelé de manière interactive et non interactive.
+Si \fBshellby\fR est appelé avec une entrée standard non connectée à un terminal, il lit et exécute les commandes reçues dans l’ordre.
+
+Si \fBshellby\fR est appelé avec une entrée standard connectée à un terminal (déterminé par \fIisatty(3)\fR), un shell \fIinteractive\fR est ouvert.
+Lors de l’exécution interactive, \fBshellby\fR affiche l’invite \fI$ \fR lorsqu’il est prêt à lire une commande.
+
+Sinon, si des arguments de ligne de commande sont fournis lors de l’appel, \fBshellby\fR traite le premier argument comme un fichier à partir duquel lire les commandes.
+Le fichier fourni doit contenir une commande par ligne.
+. B Shellby\fR exécute chacune des commandes contenues dans le fichier dans l’ordre avant de quitter.
+.in
+
+. B Environnement
+.in +2n
+Lors de l’appel, \fBshellby\fR reçoit et copie l’environnement du processus parent dans lequel il a été exécuté.
+Ce \fBenvironment\fR est un tableau de chaînes \fIname-value\fR décrivant des variables au format \fINAME=VALUE\fR.
+.in
+
+. Exécution de la commande B
+.in +2n
+Après avoir reçu une commande, \fBshellby\fR la tokenise en mots en utilisant \fB » « \fR comme délimiteur.
+Le premier mot est considéré comme la commande et tous les mots restants sont considérés comme des arguments pour cette commande.
+. B Shellby\fR procède ensuite aux actions suivantes :
+
+. RS
+1. Si le premier caractère de la commande n’est ni une barre oblique (\fI\\\fR) ni un point (\fI.\fR), le shell le recherche dans la liste des shell intégrés.
+S’il existe un shell intégré sous ce nom, le builtin est appelé.
+. Re
+
+. RS
+2. Si le premier caractère de la commande n’est pas une barre oblique (\fI\\\fR), point (\fI.\fR), ni intégré, \fBshellby\fR recherche chaque élément du
+\fBPATH\fR variable d’environnement pour un répertoire contenant un fichier exécutable portant ce nom.
+. Re
+
+. RS
+3. Si le premier caractère de la commande est une barre oblique (\fI\\\fR) ou un point (\fI.\fR) ou si l’une des recherches ci-dessus a réussi,
+le shell exécute le programme nommé avec tous les arguments restants donnés dans un environnement d’exécution distinct.
+. Re
+
+. B État de sortie
+.in +2n
+. B Shellby\fR renvoie l’état de sortie de la dernière commande exécutée, sauf si une erreur de syntaxe se produit, avec zéro indiquant la réussite et non zéro indiquant l’échec.
+
+Si une commande est introuvable, l’état de retour est 127 ; si une commande est trouvée mais n’est pas exécutable, l’état de retour est 126.
+
+All builtins return zero on success and one or two on incorrect usage (indicated by a corresponding error message).
+.in
+
+.B Signals
+.in +2n
+While running in interactive mode, \fBshellby\fR ignores the keyboard input \fBCtrl+c\fR.
+Alternatively, an input of end-of-file (\fBCtrl+d\fR) will exit the program.
+.in
+
+.B Variable Replacement
+.in +2n
+.B Shellby\fR inerprets the \fI$\fR character for variable replacement:
+
+.RS
+.B $ENV_VARIABLE\fR	\fIENV_VARIABLE\fR is subsituted with its value.
+.RE
+
+.RS
+.B $?\fR			\fI?\fR is substituted with the return value of the last program executed.
+.RE
+
+.RS
+.B $$\FR			The second \fI$\fR is substituted with the current process ID.
+.RE
+
+.B Comments
+.in +2n
+.B Shellby\fR ignores all words and characters preceeded by a \fI#\fR character on a line.
+.in
+
+.B Operators
+.in +2n
+
+.RS
+.B ;\fR - Command separator
+.RS
+Commands separated by a \fI;\fR are executed sequentially.
+.RE
+
+.B &&\fR - AND logical operator
+.RS
+.I command1\fR && \fIcommand2\fR: \fIcommand2\fR is executed if, and only if, \fIcommand1\fR returns an exit status of zero.
+.RE
+
+.B ||\fR - OR logical operator
+.RS
+.I command1\fR || \fIcommand2\fR: \fIcommand2\fR is executed if, and only if, \fIcommand1\fR returns a non-zero exit status.
+.RE
+
+The operators \fI&&\fR and \fI||\fR have equal precedence, followed by \fI;\fR.
+.RE
+
+.B Shellby Builtin Commands
+.in +2n
+
+.RS
+.B cd
+.RS
+Usage: .B cd [DIRECTORY]
+
+Changes the current directory of the process to \fBDIRECTORY\fR.
+
+If no argument is given, the command is interpreted as \fBcd $HOME\fR.
+
+If the argument \fB-\fR is given, the command is interpreted as \fBcd $OLDPWD\fR.
+
+The environment variables \fBPWD\fR and \fBOLDPWD\fR are updated after a change of directory.
+.RE
+
+.B alias
+.RS
+Usage: \fBalias [NAME[='VALUE'] ...]\fR
+
+Handles aliases.
+
+.I alias\fR: Prints a list of all aliases, one per line, in the form \fINAME='VALUE'\fR.
+
+.I alias NAME [NAME2 ...]\fR: Prints the aliases \fINAME\fR, \fINAME2\fR, etc. one per line, in the form \fINAME='VALUE'\fR.
+
+.I alias NAME='VALUE' [...]\fR: Defines an alias for each \fINAME\fR whose \fIVALUE\fR is given.
+If \fIname\fR is already an alias, its value is replaced with \fIVALUE\fR.
+.RE
+
+.B exit
+.RS
+Usage: \fBexit [STATUS]\fR
+
+Exits the shell.
+
+The \fBSTATUS\fR argument is the integer used to exit the shell.
+
+If no argument is given, the command is interpreted as \fBexit 0\fR.
+.RE
+
+.B env
+.RS
+Usage: \fBenv\fR
+
+Prints the current environment.
+.RE
+
+.B setenv
+. RS
+Utilisation : \fBsetenv [VARIABLE] [VALEUR]\fR
+
+Initialise une nouvelle variable d’environnement ou modifie une variable existante.
+
+En cas d’échec, imprime un message dans \fBstderr\fR
+. Re
+
+. B unsetenv
+. RS
+Utilisation : \fBunsetenv [VARIABLE]\fR
+
+Supprime une variable environnementale.
+
+En cas d’échec, imprime un message dans \fBstderr\fR.
+. Re
+. Re
+.in
+
+. SH VOIR AUSSI
+access(2), chdir(2), execve(2), _exit(2), exit(3), fflush(3), fork(2), free(3), isatty(3), getcwd(3), malloc(3), open(2), read(2), sh(1), signal(2), stat(2), wait(2), write(2)
+
+. B Shellby\fR émule les fonctionnalités de base du shell \fBsh\fR.
+Cette page de manuel emprunte aux pages de manuel correspondantes sh(1) et dash(1).
+. AUTEURS SH
+YAO STEPHANE
+RUTH VICTOIRE
